@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriPredict AI | Crop Yield Forecasting</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand"><span class="brand-icon">✦</span> AgriPredict <span class="ai">AI</span></div>
+    <div class="nav-tag">AGRICULTURAL INTELLIGENCE</div>
+  </nav>
+
+  <main class="container">
+    <section class="hero">
+      <div class="eyebrow"><span class="dot"></span> MACHINE LEARNING · PRECISION AGRICULTURE</div>
+      <h1>Forecast your crop yield<br><span>with data-driven insights.</span></h1>
+      <p class="hero-copy">Estimate agricultural productivity using historical crop, rainfall, temperature, and pesticide data. Explore alternative conditions and inspect model performance.</p>
+      <div class="hero-stats">
+        <div><strong>Random Forest</strong><small>Regression model</small></div>
+        <div><strong>What-if analysis</strong><small>Scenario comparison</small></div>
+        <div><strong>Model metrics</strong><small>Evaluation dashboard</small></div>
+      </div>
+    </section>
+
+    {% if metrics %}
+    <section class="metrics-section">
+      <div class="section-title">
+        <div><span class="step">01</span><h2>Model performance</h2></div>
+        <p>Evaluation on the held-out test dataset.</p>
+      </div>
+      <div class="metric-grid">
+        <article class="metric-card">
+          <span class="metric-name">R² SCORE</span>
+          <strong>{{ "%.4f"|format(metrics.r2) }}</strong>
+          <p>How much variation in the test targets is explained by the model. Closer to 1 is generally better.</p>
+        </article>
+        <article class="metric-card">
+          <span class="metric-name">MAE</span>
+          <strong>{{ "{:,.0f}".format(metrics.mae) }}</strong>
+          <p>Mean absolute prediction error, measured in hg/ha. Lower is better.</p>
+        </article>
+        <article class="metric-card">
+          <span class="metric-name">RMSE</span>
+          <strong>{{ "{:,.0f}".format(metrics.rmse) }}</strong>
+          <p>Penalizes larger prediction errors more strongly, measured in hg/ha. Lower is better.</p>
+        </article>
+      </div>
+      <p class="metric-footnote">Calculated from {{ "{:,}".format(metrics.test_records) }} test records using an 80:20 train-test split. Results depend on the dataset and split.</p>
+    </section>
+    {% else %}
+    <section class="metrics-section notice">
+      <strong>Model metrics are not available yet.</strong>
+      <p>Run <code>python train_model.py</code> to train the model and generate the evaluation dashboard.</p>
+    </section>
+    {% endif %}
+
+    <section class="workspace">
+      <div class="form-card">
+        <div class="section-heading">
+          <div><span class="step">02</span><h2>Farm conditions</h2></div>
+          <p>Enter the agricultural and environmental details.</p>
+        </div>
+        <form action="/predict" method="POST">
+          <div class="field">
+            <label for="area">Region / Country</label>
+            <input id="area" name="area" placeholder="e.g. India" required value="{{ submitted.Area if submitted else '' }}">
+          </div>
+          <div class="field">
+            <label for="crop">Crop type</label>
+            <input id="crop" name="crop" placeholder="e.g. Rice" required value="{{ submitted.Item if submitted else '' }}">
+          </div>
+          <div class="field">
+            <label for="year">Year</label>
+            <input id="year" name="year" type="number" min="1960" max="2050" value="{{ submitted.Year if submitted else 2020 }}" required>
+          </div>
+          <div class="field-grid">
+            <div class="field">
+              <label for="rainfall">Annual rainfall <span>(mm)</span></label>
+              <input id="rainfall" name="rainfall" type="number" step="any" min="0" placeholder="1200" required value="{{ submitted.average_rain_fall_mm_per_year if submitted else '' }}">
+            </div>
+            <div class="field">
+              <label for="temperature">Avg. temperature <span>(°C)</span></label>
+              <input id="temperature" name="temperature" type="number" step="any" placeholder="25.5" required value="{{ submitted.avg_temp if submitted else '' }}">
+            </div>
+          </div>
+          <div class="field">
+            <label for="pesticides">Pesticide usage <span>(tonnes)</span></label>
+            <input id="pesticides" name="pesticides" type="number" step="any" min="0" placeholder="Enter dataset value" required value="{{ submitted.pesticides_tonnes if submitted else '' }}">
+          </div>
+          <button type="submit">Generate yield forecast <span>↗</span></button>
+          <p class="form-note">Predictions are estimates based on historical data, not agronomic guarantees. Use values and category names represented in the training dataset.</p>
+        </form>
+      </div>
+
+      <div class="result-column">
+        <div class="result-card">
+          <div class="result-top"><span class="step">03</span><span class="result-label">PREDICTION OUTPUT</span></div>
+          {% if prediction is defined and prediction is not none %}
+            <div class="success-mark">✓</div>
+            <p class="result-caption">Estimated crop yield</p>
+            <h2>{{ "{:,.0f}".format(prediction) }} hg/ha</h2>
+            <div class="yield-conversion">{{ "%.2f"|format(tonnes) }} tonnes/ha <span>approximate conversion</span></div>
+            <div class="result-divider"></div>
+            <p class="result-caption">Input snapshot</p>
+            <div class="snapshot">
+              <div><span>Crop</span><strong>{{ submitted.Item }}</strong></div>
+              <div><span>Region</span><strong>{{ submitted.Area }}</strong></div>
+              <div><span>Year</span><strong>{{ submitted.Year }}</strong></div>
+            </div>
+          {% else %}
+            <div class="empty-illustration">🌱</div>
+            <h3>Your forecast will appear here</h3>
+            <p>Complete the farm conditions form and generate a prediction to see the estimated yield.</p>
+            <div class="placeholder-line"></div><div class="placeholder-line short"></div>
+          {% endif %}
+        </div>
+        {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+        <div class="info-card">
+          <div class="info-icon">i</div>
+          <div><strong>How it works</strong><p>A Random Forest regression model learns patterns from historical crop-yield records. Crop and region names are converted into numeric features using One-Hot Encoding.</p></div>
+        </div>
+      </div>
+    </section>
+
+    {% if submitted %}
+    <section class="scenario-section">
+      <div class="section-title">
+        <div><span class="step">04</span><h2>What-if scenario simulator</h2></div>
+        <p>Change environmental inputs and compare the model's estimate with the original prediction.</p>
+      </div>
+      <form action="/simulate" method="POST" class="scenario-card">
+        <input type="hidden" name="area" value="{{ submitted.Area }}">
+        <input type="hidden" name="crop" value="{{ submitted.Item }}">
+        <input type="hidden" name="year" value="{{ submitted.Year }}">
+        <input type="hidden" name="base_rainfall" value="{{ submitted.average_rain_fall_mm_per_year }}">
+        <input type="hidden" name="base_pesticides" value="{{ submitted.pesticides_tonnes }}">
+        <input type="hidden" name="base_temperature" value="{{ submitted.avg_temp }}">
+
+        <div class="scenario-fields">
+          <div class="field">
+            <label for="scenario_rainfall">Scenario rainfall (mm/year)</label>
+            <input id="scenario_rainfall" name="scenario_rainfall" type="number" min="0" step="any" required value="{{ scenario.average_rain_fall_mm_per_year }}">
+          </div>
+          <div class="field">
+            <label for="scenario_temperature">Scenario temperature (°C)</label>
+            <input id="scenario_temperature" name="scenario_temperature" type="number" step="any" required value="{{ scenario.avg_temp }}">
+          </div>
+          <div class="field">
+            <label for="scenario_pesticides">Scenario pesticide usage (tonnes)</label>
+            <input id="scenario_pesticides" name="scenario_pesticides" type="number" min="0" step="any" required value="{{ scenario.pesticides_tonnes }}">
+          </div>
+        </div>
+        <button type="submit">Compare scenario <span>↗</span></button>
+        <p class="form-note">Only these three values change. Crop, region and year remain the same for a fair comparison.</p>
+      </form>
+
+      {% if scenario_yield is defined %}
+      <div class="comparison-grid">
+        <div class="comparison-card">
+          <span>ORIGINAL ESTIMATE</span>
+          <strong>{{ "{:,.0f}".format(baseline) }} <small>hg/ha</small></strong>
+        </div>
+        <div class="comparison-card highlighted">
+          <span>WHAT-IF ESTIMATE</span>
+          <strong>{{ "{:,.0f}".format(scenario_yield) }} <small>hg/ha</small></strong>
+        </div>
+        <div class="comparison-card">
+          <span>CHANGE IN MODEL OUTPUT</span>
+          <strong>{{ "+" if difference > 0 else "" }}{{ "{:,.0f}".format(difference) }} <small>hg/ha</small></strong>
+        </div>
+      </div>
+      <p class="metric-footnote">This is a model-based scenario comparison, not evidence that changing one factor will cause the displayed yield change.</p>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <footer><span>AGRIPREDICT AI</span><span>Research prototype · Python + Flask</span></footer>
+  </main>
+</body>
+</html>
