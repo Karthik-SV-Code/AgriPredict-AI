@@ -24,7 +24,6 @@ The dataset is split into:
 - 80% training data — used to learn patterns.
 - 20% testing data — held aside to evaluate predictions on rows not used for fitting.
 
-This is a random split, not a time-based or region-based test. For research, consider testing on later years or unseen regions to check generalization.
 
 ## 6. Evaluation metrics
 
@@ -46,13 +45,8 @@ The Scikit-learn separate preprocessing and model steps keeps preprocessing and 
 - Predictions outside the dataset's ranges may be unreliable.
 - The dataset does not include every factor affecting yield, such as soil properties, irrigation, seed variety, or extreme weather events.
 
-
-## 8. Model Performance Dashboard
-
-During training, the script evaluates predictions on the test set and saves R², MAE and RMSE in `models/model_metrics.json`. The Flask page reads this file and displays the results; the dashboard does not retrain the model.
-
-## 9. What-if Scenario Analysis
+## 10. What-if Scenario Analysis
 
 The simulator changes rainfall, average temperature and pesticide usage while keeping crop, region and year unchanged. It sends both the original and modified inputs to the same trained model.
 
-The difference between the predictions shows how the model output responds to changed inputs. This is a simple sensitivity experiment, not a causal analysis. It does not prove that changing an input will cause the same change in real-world crop yield.
+The difference between the predictions shows how the model output responds to changed inputs.
